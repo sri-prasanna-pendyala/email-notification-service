@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  producer:
+    build: ./producer-api
+    ports:
+      - "8000:8000"
+    environment:
+      RABBITMQ_HOST: rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  consumer:
+    build: ./consumer-service
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      EMAIL_QUEUE_NAME: email_queue
+      DEAD_LETTER_QUEUE: dlq.email
+      MAX_RETRIES: 3
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
